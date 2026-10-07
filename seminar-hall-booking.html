@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Seminar Hall Booking Website</title>
+<style>
+:root{--bg:#f3f1fa;--ink:#1d1a33;--p:#46349b;--line:#d9d4ef;--card:#fff}
+*{box-sizing:border-box}body{margin:0;font:16px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+header,main{max-width:980px;margin:auto;padding:1rem}h1{font:700 2rem Georgia,serif;color:var(--p);margin:.8rem 0 0}header p{margin:.2rem 0}
+.halls{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.8rem;margin-bottom:1.2rem}
+.hall{background:var(--p);color:#fff;border-radius:10px;padding:.9rem}.hall b{display:block;font-size:1.1rem}
+main{display:grid;gap:1.2rem;grid-template-columns:1fr 1.5fr}@media(max-width:780px){main{grid-template-columns:1fr}}
+section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:1.1rem}
+h2{font:600 1.15rem Georgia,serif;margin:0 0 .6rem}label{display:block;font-size:.9rem;margin:.6rem 0 .2rem}
+input,select{width:100%;padding:.55rem;border:1px solid #bcb4e0;border-radius:6px;font:inherit}.row{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+button{background:var(--p);color:#fff;border:0;padding:.55rem 1rem;border-radius:6px;font:inherit;cursor:pointer;margin-top:.8rem}
+button.x{background:none;color:#a3182b;border:1px solid #a3182b;margin:0;padding:.2rem .6rem}:focus-visible{outline:3px solid #b3a6f2}
+.b{display:flex;gap:.8rem;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding:.7rem 0}.b small{color:#5b5778}
+.msg{min-height:1.3em;margin:.5rem 0 0}.err{color:#a3182b}.ok{color:#1b6b3a}
+</style></head><body>
+<header><h1>Seminar Hall Booking</h1><p>Check hall availability and book a slot for your event. Overlapping bookings are blocked automatically.</p></header>
+<div style="max-width:980px;margin:auto;padding:0 1rem"><div class="halls" id="halls"></div></div>
+<main>
+<section><h2>Book a hall</h2>
+<label for="h">Hall</label><select id="h"></select>
+<label for="ev">Event name</label><input id="ev">
+<label for="by">Booked by (name / department)</label><input id="by">
+<label for="dt">Date</label><input type="date" id="dt">
+<div class="row"><div><label for="s">Start</label><input type="time" id="s"></div><div><label for="e">End</label><input type="time" id="e"></div></div>
+<button id="go">Book hall</button><p class="msg" id="m" role="status"></p></section>
+<section><h2>Upcoming bookings</h2><div id="list"></div></section>
+</main>
+<script>
+const H=[{n:"Main Seminar Hall",c:300},{n:"Mini Seminar Hall",c:120},{n:"Conference Room",c:40}],K="bookings";
+const $=i=>document.getElementById(i);
+let bk=[{id:1,hall:"Mini Seminar Hall",ev:"Git Workshop",by:"CSE Dept",date:"2026-10-15",s:"10:00",e:"12:00"}];
+try{const x=JSON.parse(localStorage.getItem(K));if(Array.isArray(x))bk=x}catch(e){}
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(bk))}catch(e){}};
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+$("halls").innerHTML=H.map(h=>`<div class="hall"><b>${h.n}</b>Capacity: ${h.c} seats</div>`).join("");
+$("h").innerHTML=H.map(h=>`<option>${h.n}</option>`).join("");
+$("dt").min=new Date().toISOString().slice(0,10);
+function render(){
+ const r=[...bk].sort((a,b)=>(a.date+a.s).localeCompare(b.date+b.s));
+ $("list").innerHTML=r.length?r.map(b=>`<div class="b"><div><strong>${esc(b.ev)}</strong><br><small>${b.hall} · ${b.date} · ${b.s}–${b.e}<br>${esc(b.by)}</small></div><button class="x" data-id="${b.id}">Cancel</button></div>`).join(""):"<p>No bookings yet. Pick a hall and a slot to make the first one.</p>";
+}
+$("go").onclick=()=>{
+ const b={id:Date.now(),hall:$("h").value,ev:$("ev").value.trim(),by:$("by").value.trim(),date:$("dt").value,s:$("s").value,e:$("e").value},m=$("m");
+ m.className="msg err";
+ if(!b.ev||!b.by||!b.date||!b.s||!b.e)return m.textContent="Fill in every field.";
+ if(b.e<=b.s)return m.textContent="End time must be after start time.";
+ const clash=bk.find(x=>x.hall===b.hall&&x.date===b.date&&b.s<x.e&&b.e>x.s);
+ if(clash)return m.textContent=`${b.hall} is already booked ${clash.s}–${clash.e} that day for "${clash.ev}".`;
+ bk.push(b);save();render();m.className="msg ok";m.textContent="Booked "+b.hall+" on "+b.date+".";
+};
+$("list").onclick=e=>{const id=e.target.dataset.id;if(id){bk=bk.filter(b=>String(b.id)!==id);save();render()}};
+render();
+</script></body></html>
